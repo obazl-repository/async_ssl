@@ -1,0 +1,50 @@
+package(default_visibility = ["//visibility:public"])
+
+load("@rules_ocaml//build:rules.bzl",
+     "ocaml_binary",
+     "ocaml_exec_module",
+     "ocaml_signature",
+     "ppx_executable",
+)
+
+DEPS_1 = [
+    "@async//lib/async",
+    "@core//lib/core",
+    "//src:async_ssl"
+]
+
+##############################
+####  Executable Targets  ####
+ocaml_binary(
+    name     = "hello.exe",
+    main     = ":Hello",
+    data = [
+        "do_not_use_in_production.crt",
+        "do_not_use_in_production.key",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ocaml_signature(
+    name          = "Hello_cmi",
+    src           = "hello.mli",
+    deps          = DEPS_1,
+    ppx           = ":ppx.exe",
+)
+
+ocaml_exec_module(
+    name          = "Hello",
+    struct        = "hello.ml",
+    sig           = ":Hello_cmi",
+    deps          = DEPS_1 + ["@core_unix//lib/command_unix"],
+    ppx           = ":ppx.exe",
+)
+
+###############
+ppx_executable(
+    name    = "ppx.exe",
+    main    = "@ppxlib//lib/runner",
+    prologue = [
+        "@ppx_jane//lib/ppx_jane"
+    ],
+)

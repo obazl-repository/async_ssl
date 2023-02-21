@@ -1,0 +1,385 @@
+package(default_visibility = ["//visibility:public"])
+
+load("@rules_ocaml//build:rules.bzl",
+     "ocaml_ns_archive",
+     "ocaml_module",
+     "ocaml_signature",
+     "ppx_executable",
+     "ppx_module",
+     "cc_selection_proxy",
+)
+
+DEPS_1 = [
+    "//bindings:async_ssl_bindings",
+    "@async//lib/async",
+    "@core//lib/core",
+    "@ctypes//lib/stubs",
+    "@ctypes//lib/ctypes"
+]
+
+OPTS_1 = [
+        "-w",
+        "-9-27-32-34"
+]
+
+############################# Aggregates #############################
+ocaml_ns_archive(
+    name       = "async_ssl",
+    ns_name    = "async_ssl",
+    manifest = [
+        # ":Config",
+        ":Ffi__library_must_be_initialized",
+        ":Ffi_generated",
+        ":Ffi_generated_types",
+        ":Import",
+        ":Initialize",
+        ":Opt",
+        ":Rfc3526",
+        ":Ssl",
+        ":Std",
+        # ":Tls",
+        ":Verify_mode",
+        ":Version"
+    ],
+    cc_deps    = ["libasync_ssl_stubs"],
+)
+
+######################## Modules & Signatures ########################
+ocaml_signature(
+    name          = "Config_cmi",
+    src           = "config.mli",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Import",
+        ":Opt",
+        ":Ssl",
+        ":Verify_mode",
+        ":Version"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Config",
+    struct        = "config.ml",
+    sig           = ":Config_cmi",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Import",
+        ":Opt",
+        ":Ssl",
+        ":Verify_mode",
+        ":Version"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_signature(
+    name          = "Ffi__library_must_be_initialized_cmi",
+    src           = "ffi__library_must_be_initialized.mli",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Import",
+        ":Opt",
+        ":Verify_mode",
+        ":Version"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Ffi__library_must_be_initialized",
+    struct        = "ffi__library_must_be_initialized.ml",
+    sig           = ":Ffi__library_must_be_initialized_cmi",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Import",
+        ":Opt",
+        ":Verify_mode",
+        ":Version"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_signature(
+    name          = "Ffi_generated_cmi",
+    src           = "ffi_generated.mli",
+    opts          = OPTS_1,
+    deps          = DEPS_1,
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Ffi_generated",
+    struct        = "ffi_generated.ml",
+    sig           = ":Ffi_generated_cmi",
+    opts          = OPTS_1,
+    deps          = DEPS_1,
+    ppx           = ":ppx.exe",
+)
+
+ocaml_signature(
+    name          = "Initialize_cmi",
+    src           = "initialize.mli",
+    opts          = OPTS_1,
+    deps          = DEPS_1,
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Initialize",
+    struct        = "initialize.ml",
+    sig           = ":Initialize_cmi",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Import"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_signature(
+    name          = "Opt_cmi",
+    src           = "opt.mli",
+    opts          = OPTS_1,
+    deps          = DEPS_1,
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Opt",
+    struct        = "opt.ml",
+    sig           = ":Opt_cmi",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Import"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_signature(
+    name          = "Rfc3526_cmi",
+    src           = "rfc3526.mli",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Ffi__library_must_be_initialized"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Rfc3526",
+    struct        = "rfc3526.ml",
+    sig           = ":Rfc3526_cmi",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Ffi__library_must_be_initialized"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_signature(
+    name          = "Ssl_cmi",
+    src           = "ssl.mli",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Opt",
+        ":Verify_mode",
+        ":Version"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Ssl",
+    struct        = "ssl.ml",
+    sig           = ":Ssl_cmi",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Ffi__library_must_be_initialized",
+        ":Import",
+        ":Initialize",
+        ":Rfc3526",
+        ":Opt",
+        ":Verify_mode",
+        ":Version"
+    ],
+    ppx           = ":ppx.exe",
+    ppx_args      = [
+        "-allow-unannotated-ignores",
+        "-inline-test-lib", "async_ssl"
+    ]
+)
+
+ocaml_signature(
+    name          = "Tls_cmi",
+    src           = "tls.mli",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        # ":Config",
+        ":Import",
+        ":Ssl"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Tls",
+    struct        = "tls.ml",
+    sig           = ":Tls_cmi",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        # ":Config",
+        ":Import",
+        ":Ssl"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_signature(
+    name          = "Verify_mode_cmi",
+    src           = "verify_mode.mli",
+    opts          = OPTS_1,
+    deps          = DEPS_1,
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Verify_mode",
+    struct        = "verify_mode.ml",
+    sig           = ":Verify_mode_cmi",
+    opts          = OPTS_1,
+    deps          = DEPS_1,
+    ppx           = ":ppx.exe",
+)
+
+ocaml_signature(
+    name          = "Version_cmi",
+    src           = "version.mli",
+    opts          = OPTS_1,
+    deps          = DEPS_1,
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Version",
+    struct        = "version.ml",
+    sig           = ":Version_cmi",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Import"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Ffi_generated_types",
+    struct        = "ffi_generated_types.ml",
+    opts          = OPTS_1,
+    deps          = DEPS_1,
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Import",
+    struct        = "import.ml",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Ffi_generated",
+        ":Ffi_generated_types"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Std",
+    struct        = "std.ml",
+    opts          = OPTS_1,
+    deps          = DEPS_1 + [
+        ":Ssl"
+    ],
+    ppx           = ":ppx.exe",
+)
+
+
+###############
+ppx_executable(
+    name    = "ppx.exe",
+    main    = "@ppxlib//lib/runner",
+    prologue = [
+        "@ppx_jane//lib/ppx_jane"
+    ],
+)
+############################# Rules ##################################
+
+################ ################
+cc_selection_proxy(
+    name = "libasync_ssl_stubs",
+    selection = select({
+        "@ocaml//platforms:vm?": ["dllasync_ssl_stubs.so"],
+        "@ocaml//platforms:sys?": ["async_ssl_tubs"],
+        "//conditions:default": ["async_ssl_stubs"]    })
+)
+
+cc_binary(
+    name = "dllasync_ssl_stubs.so",
+    linkshared = True,
+    srcs = ["ffi_generated_stubs.c"],
+    deps = ["@ocaml//c", "//openssl"],
+    copts = ["-I", "external/ocaml/c",
+             "-I", "//openssl"]
+)
+
+cc_library(
+    name = "async_ssl_stubs",
+    linkstatic = True,
+    srcs = ["ffi_generated_stubs.c", "//bindings:openssl_helpers.h"],
+    deps = [
+        "//bindings:async_ssl_bindings",
+        "//openssl",
+        "@ocaml//c",
+        # "@ctypes//lib/ctypes",
+        "@ctypes//lib/ctypes:hdrs"
+    ],
+    copts = [
+        "-I", "bindings",
+        "-I", "external/ocaml/c",
+        "-I", "//openssl",
+        "-I", "external/ctypes/lib",
+        "-I", "external/ctypes/lib/ctypes",
+        "-Wno-implicit-function-declaration"
+    ]
+)
+
+################################################################
+########  file generation  #######
+genrule(
+    outs  = ["ffi_generated.ml"],
+    name  = "gen_ffi_generated.ml",
+    cmd_bash   = " ".join([
+        "$(execpath //stubgen:ffi_stubgen.exe)",
+        "-ml",
+        "> $@",
+    ]),
+    tools   = ["//stubgen:ffi_stubgen.exe"]
+)
+
+genrule(
+    outs  = ["ffi_generated_stubs.c"],
+    name  = "gen_ffi_generated_stubs.c",
+    cmd_bash   = " ".join([
+        "$(execpath //stubgen:ffi_stubgen.exe)",
+        "-c",
+        "> $@",
+    ]),
+    tools   = ["//stubgen:ffi_stubgen.exe"]
+)
+
+genrule(
+    outs  = ["ffi_generated_types.ml"],
+    name  = "gen_ffi_generated_types.ml",
+    cmd_bash   = " ".join([
+        "$(execpath //stubgen:ffi_ml_types_stubgen.exe)",
+        "> $@",
+    ]),
+    tools   = ["//stubgen:ffi_ml_types_stubgen.exe"]
+)

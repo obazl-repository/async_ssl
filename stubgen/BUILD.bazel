@@ -1,0 +1,103 @@
+package(default_visibility = ["//visibility:public"])
+
+load("@rules_ocaml//build:rules.bzl",
+     "ocaml_binary",
+     "ocaml_library",
+     "ocaml_ns_library",
+     "ocaml_exec_module",
+     "ocaml_module",
+     "ocaml_signature",
+)
+
+DEPS_1 = [
+    "//bindings:async_ssl_bindings",
+    # "@ctypes//lib/stubs",
+    # "@ctypes//lib/ctypes"
+]
+
+##############################
+####  Executable Targets  ####
+ocaml_binary(
+    name     = "ffi_stubgen.exe",
+    # env = {"MACOSX_DEPLOYMENT_TARGET": "13.1"},
+    main     = ":Ffi_stubgen",
+    visibility = ["//visibility:public"],
+    opts = [
+        "-ccopt", "-DMACOSX_DEPLOYMENT_TARGET=13.1",
+        "-ccopt", "-DAPPLE_SDK_VERSION_OVERRIDE=13.1",
+        "-verbose",
+        # "-ccopt", "-Wl,-v",
+        # "-ccopt", "-Wl,-why_load", # macos
+        # "-ccopt", "-Wl,-print_statistics", # macos
+    ]
+)
+
+ocaml_signature(
+    name          = "Ffi_stubgen_cmi",
+    src           = "ffi_stubgen.mli",
+    # deps          = DEPS_1,
+)
+
+ocaml_exec_module(
+    name          = "Ffi_stubgen",
+    struct        = "ffi_stubgen.ml",
+    sig           = ":Ffi_stubgen_cmi",
+    deps          = [
+        "@ctypes//lib/stubs",
+        "@ctypes//lib/foreign",
+        "//bindings:async_ssl_bindings"
+    ]
+)
+
+#############
+ocaml_binary(
+    name     = "ffi_types_stubgen.exe",
+    main     = ":Ffi_types_stubgen",
+    visibility = ["//visibility:public"],
+    opts = [
+        "-ccopt", "-DMACOSX_DEPLOYMENT_TARGET=13.1",
+        "-verbose"
+    ]
+)
+
+ocaml_signature(
+    name          = "Ffi_types_stubgen_cmi",
+    src           = "ffi_types_stubgen.mli",
+    deps          = DEPS_1,
+)
+
+ocaml_exec_module(
+    name          = "Ffi_types_stubgen",
+    struct        = "ffi_types_stubgen.ml",
+    sig           = ":Ffi_types_stubgen_cmi",
+    deps          = DEPS_1 + ["@ctypes//lib/stubs"],
+)
+
+##########
+cc_binary(
+    name = "ffi_ml_types_stubgen.exe",
+    srcs = ["ffi_ml_types_stubgen.c"],
+    deps = [
+        "//openssl",
+        "@ocaml//c",
+        "@ctypes//lib/ctypes:hdrs",
+        # "@ctypes//lib/stubs",
+        # "@ctypes//lib/foreign",
+    ],
+    copts = [
+        "-I", "//openssl",
+        "-I", "external/ctypes/lib/ctypes",
+        "-I", "external/ocaml/c"
+    ]
+)
+
+genrule(
+    outs  = ["ffi_ml_types_stubgen.c"],
+    name  = "gen_ffi_ml_types_stubgen.c",
+    cmd_bash   = " ".join([
+        "$(execpath :ffi_types_stubgen.exe)",
+        "> $@",
+    ]),
+    tools = [":ffi_types_stubgen.exe"],
+)
+

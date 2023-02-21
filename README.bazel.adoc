@@ -1,0 +1,23 @@
+= async-uri (Bazelized)
+
+
+== OPAM deps
+
+See the `depends` clause in link:async_ssl.opam[async_ssl.opam].
+
+We do not need `conf-libssl`, `dune`, or `dune-configurator`, but it
+does not hurt if they are installed.
+
+Make sure you have installed the correct versions.
+
+Then:
+
+    bazel run @obazl//coswitch/<SCOPE>:refresh
+
+where <SCOPE> is `local` if you installed your switch locally,
+otherwise `sys` or `xdg`.
+
+
+
+
+

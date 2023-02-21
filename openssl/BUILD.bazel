@@ -1,0 +1,69 @@
+load("@rules_foreign_cc//foreign_cc:configure.bzl",
+     "configure_make")
+
+config_setting(
+    name = "macos",
+    constraint_values = ["@platforms//os:macos"])
+
+ENV_MACOS_13_0 = {"AR": "", "MACOSX_DEPLOYMENT_TARGET": "13.0"}
+config_setting(
+    name = "macos_13.0",
+    values = {"macos_sdk_version": "13.0"},
+    constraint_values = ["@platforms//os:macos"])
+
+ENV_MACOS_13_1 = {"AR": "", "MACOSX_DEPLOYMENT_TARGET": "13.1"}
+config_setting(
+    name = "macos_13.1",
+    values = {"macos_sdk_version": "13.1"},
+    constraint_values = ["@platforms//os:macos"])
+
+# See https://wiki.openssl.org/index.php/Compilation_and_Installation
+# See https://github.com/bazelbuild/rules_foreign_cc/issues/338
+
+configure_make(
+    name = "openssl",
+    env = select({
+        ":macos_13.0": ENV_MACOS_13_0,
+        ":macos_13.1": ENV_MACOS_13_1,
+        "//conditions:default": {"AR": ""}
+    }),
+    configure_command = "config",
+    configure_in_place = True,
+    configure_options = [
+        # "--api=x.y[.z]",
+        # "no-deprecated",
+        "no-shared",  # do not build shared libs
+        # "enable-ktls", # build with kernel TLS support
+        # "no-autoload-config,
+        "no-stdio", # suppresses build of CLI apps
+        "no-ssl-trace", # maybe a small reduction in libssl binary size
+        "no-tests",
+        "no-ui-console",
+        ## protocol negotiation
+        "no-dtls",
+        ## protocol methods
+        "no-dtls1-method",
+        "no-dtls1_2-method",
+        "no-ssl3-method",
+    ] +
+    select({
+        "macos": [
+            "enable-ec_nistp_64_gcc_128",
+            "no-ssl2",
+            "no-ssl3",
+            "no-comp" # Don't build support for SSL/TLS compression.
+        ],
+        # ":linux_build": [
+        #     "enable-tfo", # Build with support for TCP Fast Open (RFC7413).
+        # ],
+        ## for platforms supporting both 32 and 64 bits:
+        #     "--w", # skip the 32/64 bit choice offering
+        "//conditions:default": []
+    }),
+    lib_source = "@openssl//:all",
+    visibility = ["//visibility:public"],
+    out_static_libs = [
+        "libssl.a",
+        "libcrypto.a",
+    ]
+)
