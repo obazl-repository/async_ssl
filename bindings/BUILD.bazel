@@ -1,0 +1,129 @@
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["openssl_helpers.h"])
+
+load("@rules_ocaml//build:rules.bzl",
+     "ocaml_ns_archive",
+     "ocaml_module",
+     "ppx_executable",
+     "ppx_module",
+     "cc_selection_proxy"
+)
+
+############################# Aggregates #############################
+ocaml_ns_archive(
+    name       = "async_ssl_bindings",
+    ns_name    = "async_ssl_bindings",
+    manifest = [
+        ":Ctypes_foreign_threaded_flat",
+        ":Ffi_bindings"
+    ],
+)
+
+######################## Modules & Signatures ########################
+ocaml_module(
+    name          = "Ctypes_foreign_threaded_flat",
+    struct        = "ctypes_foreign_threaded_flat.ml",
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Ffi_bindings",
+    struct        = "ffi_bindings.ml",
+    deps          = [
+        "@base//lib/base",
+        "@ctypes//lib/ctypes",
+        "@ctypes//lib/foreign",
+        ":libopenssl_helpers",
+    ],
+    ppx           = ":ppx.exe",
+    ppx_data      = [":config.h"]
+)
+
+
+###############
+ppx_executable(
+    name    = "ppx.exe",
+    main    = "@ppxlib//lib/runner",
+    prologue = [
+        "@ppx_jane//lib/ppx_jane"
+    ],
+)
+
+######################## CC DEPS ########################
+cc_selection_proxy(
+    name = "libopenssl_helpers",
+    selection = select({
+        "@ocaml//platforms:vm?": ["dllopenssl_helpers.so"],
+        "@ocaml//platforms:sys?": ["openssl_helpers"],
+        "//conditions:default": ["openssl_helpers"]    })
+)
+
+cc_binary(
+    name = "dllopenssl_helpers.so",
+    linkshared = True,
+    srcs = ["openssl_helpers.c", "openssl_helpers.h"],
+    deps = ["@ocaml//c", "//openssl"],
+    copts = [
+        "-I", "external/ocaml/c",
+        "-Werror", "-pedantic", "-Wall", "-Wunused",
+        # suppress warning: 'ASN1_STRING_data' is deprecated
+        "-Wno-deprecated-declarations"
+    ]
+)
+
+cc_library(
+    name = "openssl_helpers",
+    linkstatic = True,
+    srcs = ["openssl_helpers.c", "openssl_helpers.h"],
+    deps = ["@ocaml//c", "//openssl"],
+    copts = [
+        "-I", "external/ocaml/c",
+        "-Werror", "-pedantic", "-Wall", "-Wunused",
+        # suppress warning: 'ASN1_STRING_data' is deprecated
+        "-Wno-deprecated-declarations"
+    ]
+)
+
+################################################################
+
+## Discover - not needed for Bazel builds
+
+########
+# genrule(
+#     outs  = [
+#         "openssl-ccopt.sexp",
+#         "openssl-cclib.sexp",
+#         "openssl-ccopt",
+#         "openssl-cclib"
+#     ],
+#     name  = "__openssl-ccopt.sexp__",
+#     cmd   = " ".join([
+#         "$(execpath //bindings/config:discover.exe)",
+
+#     ]),
+#     exec_tools = [
+#         "//bindings/config:discover.exe"
+#     ]
+# )
+
+########
+# genrule(
+#     outs  = ["config.h"],
+#     name  = "gen_config.h",
+#     srcs  = [],
+#     cmd_bash   = " ".join([
+#         "$(execpath //bindings:discover.exe)",
+#         "> \"$@\"",
+#     ]),
+#     tools   = [":discover.exe"]
+# )
+
+################ ################
+# cc_binary(
+#     name = "discover.exe",
+#     srcs = ["discover.c"],
+#     deps = ["//openssl"],
+#     copts = ["-I", "//openssl"]
+# )
+
