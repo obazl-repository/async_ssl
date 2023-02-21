@@ -34,6 +34,12 @@ module Ssl_ctx : sig
   (** Initialize a new SSL context, out of which all SSL connections are allocated. *)
   val create_exn : Version.t -> t
 
+  (** Set OpenSSL Security level, see [man SSL_CTX_set_security_level].
+      0 - is weakest/no security
+      5 - is highest security,
+      Default depends on System/OpenSSL version. *)
+  val override_default_insecure__set_security_level : t -> int -> unit
+
   (** Set options on the SSL context, see [Opt] for available options.  Currently used for
       disabling protocol versions. *)
   val set_options : t -> Opt.t list -> unit
@@ -148,6 +154,7 @@ module X509 : sig
 
   val get_subject_name : t -> X509_name.t
   val get_subject_alt_names : t -> string list
+  val fingerprint : t -> [ `SHA1 ] -> string
 end
 
 module Ssl_session : sig
@@ -161,28 +168,6 @@ module Dh : sig
 
   val create : prime:[ `hex of string ] -> generator:[ `hex of string ] -> t
   val generate_parameters : prime_len:int -> generator:int -> unit -> t
-end
-
-module Ec_key : sig
-  module Curve : sig
-    type t [@@deriving sexp]
-
-    val to_string : t -> string
-    val of_string : string -> t
-    val secp384r1 : t
-    val secp521r1 : t
-    val prime256v1 : t
-  end
-
-  type t
-
-  val new_by_curve_name : Curve.t -> t
-end
-
-module Rsa : sig
-  type t
-
-  val generate_key : key_length:int -> exponent:int -> unit -> t
 end
 
 (* Represents an SSL connection. This follows the naming convention of libopenssl, but
@@ -215,6 +200,7 @@ module Ssl : sig
   val check_private_key : t -> unit Or_error.t
   val set_verify : t -> Verify_mode.t list -> unit
   val get_peer_certificate : t -> X509.t option
+  val get_peer_certificate_fingerprint : t -> [ `SHA1 ] -> string option
 
   (* Returns Ok () if there is no peer certificate. *)
 
@@ -229,17 +215,9 @@ module Ssl : sig
       This is really [SSL_set_cipher_list t (String.concat ~sep:":" ("-ALL" ::  ciphers))]. *)
 
   val set_cipher_list_exn : t -> string list -> unit
-
-  module Tmp_dh_callback : Foreign.Funptr with type fn = t -> bool -> int -> Dh.t
-
-  val set_tmp_dh_callback : t -> Tmp_dh_callback.t -> unit
-  val set_tmp_ecdh : t -> Ec_key.t -> unit
-
-  module Tmp_rsa_callback : Foreign.Funptr with type fn = t -> bool -> int -> Rsa.t
-
-  val set_tmp_rsa_callback : t -> Tmp_rsa_callback.t -> unit
   val get_cipher_list : t -> string list
   val get_peer_certificate_chain : t -> string option
+  val set1_groups_list_exn : t -> string list -> unit
 end
 
 (** Pops all errors off of the openssl error stack, returning them as a list of

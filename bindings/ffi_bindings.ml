@@ -47,11 +47,106 @@ module Tmp_rsa_callback =
 
 module Types (F : Cstubs.Types.TYPE) = struct
   module Ssl_op = struct
+    (*$
+      open Core;;
+
+      List.iter
+        [ "SSL_OP_NO_SSLv2"
+        ; "SSL_OP_NO_SSLv3"
+        ; "SSL_OP_NO_TLSv1"
+        ; "SSL_OP_NO_TLSv1_1"
+        ; "SSL_OP_NO_TLSv1_2"
+        ; "SSL_OP_NO_TLSv1_3"
+        ; "SSL_OP_SINGLE_DH_USE"
+        ; "SSL_OP_SINGLE_ECDH_USE"
+        ]
+        ~f:(fun c_sym ->
+          let ml_sym =
+            String.chop_prefix_exn c_sym ~prefix:"SSL_OP_" |> String.lowercase
+          in
+          let fallback = "Unsigned.ULong.zero" in
+          print_endline
+            [%string
+              {|
+    [%%if defined JSC_%{c_sym}]
+    let %{ml_sym} = F.constant "%{c_sym}" F.ulong
+    [%%else]
+    let %{ml_sym} = %{fallback}
+    [%%endif] |}])
+    *)
+    [%%if defined JSC_SSL_OP_NO_SSLv2]
+
     let no_sslv2 = F.constant "SSL_OP_NO_SSLv2" F.ulong
+
+    [%%else]
+
+    let no_sslv2 = Unsigned.ULong.zero
+
+    [%%endif]
+    [%%if defined JSC_SSL_OP_NO_SSLv3]
+
     let no_sslv3 = F.constant "SSL_OP_NO_SSLv3" F.ulong
+
+    [%%else]
+
+    let no_sslv3 = Unsigned.ULong.zero
+
+    [%%endif]
+    [%%if defined JSC_SSL_OP_NO_TLSv1]
+
     let no_tlsv1 = F.constant "SSL_OP_NO_TLSv1" F.ulong
+
+    [%%else]
+
+    let no_tlsv1 = Unsigned.ULong.zero
+
+    [%%endif]
+    [%%if defined JSC_SSL_OP_NO_TLSv1_1]
+
     let no_tlsv1_1 = F.constant "SSL_OP_NO_TLSv1_1" F.ulong
+
+    [%%else]
+
+    let no_tlsv1_1 = Unsigned.ULong.zero
+
+    [%%endif]
+    [%%if defined JSC_SSL_OP_NO_TLSv1_2]
+
     let no_tlsv1_2 = F.constant "SSL_OP_NO_TLSv1_2" F.ulong
+
+    [%%else]
+
+    let no_tlsv1_2 = Unsigned.ULong.zero
+
+    [%%endif]
+    [%%if defined JSC_SSL_OP_NO_TLSv1_3]
+
+    let no_tlsv1_3 = F.constant "SSL_OP_NO_TLSv1_3" F.ulong
+
+    [%%else]
+
+    let no_tlsv1_3 = Unsigned.ULong.zero
+
+    [%%endif]
+    [%%if defined JSC_SSL_OP_SINGLE_DH_USE]
+
+    let single_dh_use = F.constant "SSL_OP_SINGLE_DH_USE" F.ulong
+
+    [%%else]
+
+    let single_dh_use = Unsigned.ULong.zero
+
+    [%%endif]
+    [%%if defined JSC_SSL_OP_SINGLE_ECDH_USE]
+
+    let single_ecdh_use = F.constant "SSL_OP_SINGLE_ECDH_USE" F.ulong
+
+    [%%else]
+
+    let single_ecdh_use = Unsigned.ULong.zero
+
+    [%%endif]
+    (*$*)
   end
 
   module Verify_mode = struct
@@ -82,6 +177,10 @@ module Types (F : Cstubs.Types.TYPE) = struct
     let pem = F.constant "X509_FILETYPE_PEM" F.int
     let asn1 = F.constant "X509_FILETYPE_ASN1" F.int
   end
+
+  module Evp = struct
+    let max_md_size = F.constant "EVP_MAX_MD_SIZE" F.int
+  end
 end
 
 module Bindings (F : Cstubs.FOREIGN) = struct
@@ -99,12 +198,12 @@ module Bindings (F : Cstubs.FOREIGN) = struct
   (* Some systems with older OpenSSL don't support TLS 1.1 and 1.2.
      https://github.com/janestreet/async_ssl/issues/3
 
-     This was originally solved by using [Ctypes_foreign_threaded.Foreign.foreign ~stub:true].
+     This was originally solved by using [Ctypes_foreign.Foreign.foreign ~stub:true].
      We now detect available symbols at compile time.
 
      Bindings are uniformly using stubs (no libffi dependency).
 
-     Note: using [Ctypes_foreign_threaded.Foreign.foreign ~stub:true] was failing (segfault)
+     Note: using [Ctypes_foreign.Foreign.foreign ~stub:true] was failing (segfault)
      with 32bit build on 64bit host.
   *)
   module Ssl_method = struct
@@ -116,22 +215,54 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     let implemented name = foreign name Ctypes.(void @-> returning t)
     let helper name f = f name
 
-    [%%ifdef JSC_TLS_method]
+    (*$
+      open Core;;
 
-    let tls = helper "TLS_method" implemented
+      List.iter
+        [ "SSLv23_method"
+        ; "TLS_method"
+        ; "SSLv3_method"
+        ; "TLSv1_method"
+        ; "TLSv1_1_method"
+        ; "TLSv1_2_method"
+        ; "TLSv1_3_method"
+        ]
+        ~f:(fun c_sym ->
+          let ml_sym =
+            String.chop_suffix_exn c_sym ~suffix:"_method" |> String.lowercase
+          in
+          let fallback =
+            if String.equal c_sym "TLS_method"
+            then "sslv23"
+            else [%string {|helper "%{c_sym}" dummy|}]
+          in
+          print_endline
+            [%string
+              {|
+    [%%if defined JSC_%{c_sym}]
+    let %{ml_sym} = helper "%{c_sym}" implemented
+    [%%else]
+    let %{ml_sym} = %{fallback}
+    [%%endif] |}])
+    *)
+    [%%if defined JSC_SSLv23_method]
 
-    [%%elif defined JSC_SSLv23_method]
-
-    let tls = helper "SSLv23_method" implemented
+    let sslv23 = helper "SSLv23_method" implemented
 
     [%%else]
 
-    let tls = helper "TLS_method" dummy
+    let sslv23 = helper "SSLv23_method" dummy
 
     [%%endif]
+    [%%if defined JSC_TLS_method]
 
-    let sslv23 = tls
+    let tls = helper "TLS_method" implemented
 
+    [%%else]
+
+    let tls = sslv23
+
+    [%%endif]
     [%%if defined JSC_SSLv3_method]
 
     let sslv3 = helper "SSLv3_method" implemented
@@ -168,6 +299,16 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     let tlsv1_2 = helper "TLSv1_2_method" dummy
 
     [%%endif]
+    [%%if defined JSC_TLSv1_3_method]
+
+    let tlsv1_3 = helper "TLSv1_3_method" implemented
+
+    [%%else]
+
+    let tlsv1_3 = helper "TLSv1_3_method" dummy
+
+    [%%endif]
+    (*$*)
 
     (* SSLv2 isn't secure, so we don't use it.  If you really really really need it, use
        SSLv23 which will at least try to upgrade the security whenever possible.
@@ -222,6 +363,10 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     (* free with SSL_CTX_free() (source: manpage of SSL_CTX_free(3)) *)
     let new_ = foreign "SSL_CTX_new" Ctypes.(Ssl_method.t @-> returning t_opt)
     let free = foreign "SSL_CTX_free" Ctypes.(t @-> returning void)
+
+    let override_default_insecure__set_security_level =
+      foreign "SSL_CTX_set_security_level" Ctypes.(t @-> int @-> returning void)
+    ;;
 
     let load_verify_locations =
       foreign
@@ -337,6 +482,14 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     ;;
   end
 
+  module EVP = struct
+    include Voidp (struct
+        let name = "EVP"
+      end)
+
+    let sha1 = foreign "EVP_sha1" Ctypes.(void @-> returning t)
+  end
+
   module X509 = struct
     include Voidp (struct
         let name = "X509"
@@ -364,6 +517,12 @@ module Bindings (F : Cstubs.FOREIGN) = struct
       foreign
         "async_ssl__free_subject_alt_names"
         Ctypes.(ptr (ptr_opt char) @-> returning void)
+    ;;
+
+    let digest =
+      foreign
+        "X509_digest"
+        Ctypes.(t @-> EVP.t @-> ptr char @-> ptr int @-> returning bool)
     ;;
   end
 
@@ -419,30 +578,6 @@ module Bindings (F : Cstubs.FOREIGN) = struct
     end
   end
 
-  module Ec_key = struct
-    include Voidp (struct
-        let name = "Ec_key"
-      end)
-
-    let new_by_curve_name =
-      foreign "EC_KEY_new_by_curve_name" Ctypes.(int @-> returning t_opt)
-    ;;
-
-    let free = foreign "EC_KEY_free" Ctypes.(t @-> returning void)
-  end
-
-  module Rsa = struct
-    include Rsa
-
-    let generate_key =
-      foreign
-        "RSA_generate_key"
-        Ctypes.(int @-> int @-> Progress_callback.t_opt @-> ptr void @-> returning t_opt)
-    ;;
-
-    let free = foreign "RSA_free" Ctypes.(t @-> returning void)
-  end
-
   module Ssl = struct
     include Ssl
 
@@ -475,24 +610,8 @@ module Bindings (F : Cstubs.FOREIGN) = struct
       foreign "SSL_get_cipher_list" Ctypes.(t @-> int @-> returning string_opt)
     ;;
 
-    module Tmp_dh_callback = Tmp_dh_callback
-
-    let set_tmp_dh_callback =
-      foreign
-        "SSL_set_tmp_dh_callback"
-        Ctypes.(t @-> Tmp_dh_callback.t @-> returning void)
-    ;;
-
-    let set_tmp_ecdh =
-      foreign "SSL_set_tmp_ecdh" Ctypes.(t @-> Ec_key.t @-> returning void)
-    ;;
-
-    module Tmp_rsa_callback = Tmp_rsa_callback
-
-    let set_tmp_rsa_callback =
-      foreign
-        "SSL_set_tmp_rsa_callback"
-        Ctypes.(t @-> Tmp_rsa_callback.t @-> returning void)
+    let set1_groups_list =
+      foreign "SSL_set1_groups_list" Ctypes.(t @-> string @-> returning int)
     ;;
 
     (* free with X509_free() (source: manpage of SSL_get_peer_certificate(3)) *)

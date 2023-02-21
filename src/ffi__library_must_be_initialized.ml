@@ -94,6 +94,7 @@ module Ssl_ctx = struct
       | V.Tlsv1 -> Ssl_method.tlsv1 ()
       | V.Tlsv1_1 -> Ssl_method.tlsv1_1 ()
       | V.Tlsv1_2 -> Ssl_method.tlsv1_2 ()
+      | V.Tlsv1_3 -> Ssl_method.tlsv1_3 ()
     in
     match Bindings.Ssl_ctx.new_ ver_method with
     | None -> failwith "Could not allocate a new SSL context."
@@ -102,17 +103,28 @@ module Ssl_ctx = struct
       p
   ;;
 
+  let override_default_insecure__set_security_level t level =
+    Bindings.Ssl_ctx.override_default_insecure__set_security_level t level
+  ;;
+
   let set_options context options =
+    let module O = Types.Ssl_op in
+    let default_options =
+      List.fold
+        [ O.single_dh_use; O.single_ecdh_use ]
+        ~init:Unsigned.ULong.zero
+        ~f:Unsigned.ULong.logor
+    in
     let opts =
-      List.fold options ~init:Unsigned.ULong.zero ~f:(fun acc opt ->
-        let module O = Opt in
+      List.fold options ~init:default_options ~f:(fun acc (opt : Opt.t) ->
         let o =
           match opt with
-          | O.No_sslv2 -> Types.Ssl_op.no_sslv2
-          | O.No_sslv3 -> Types.Ssl_op.no_sslv3
-          | O.No_tlsv1 -> Types.Ssl_op.no_tlsv1
-          | O.No_tlsv1_1 -> Types.Ssl_op.no_tlsv1_1
-          | O.No_tlsv1_2 -> Types.Ssl_op.no_tlsv1_2
+          | No_sslv2 -> O.no_sslv2
+          | No_sslv3 -> O.no_sslv3
+          | No_tlsv1 -> O.no_tlsv1
+          | No_tlsv1_1 -> O.no_tlsv1_1
+          | No_tlsv1_2 -> O.no_tlsv1_2
+          | No_tlsv1_3 -> O.no_tlsv1_3
         in
         Unsigned.ULong.logor acc o)
     in
@@ -272,6 +284,19 @@ module X509 = struct
           loop [] results_p_p)
         ~finally:(fun () -> Bindings.X509.free_subject_alt_names results_p_p)
   ;;
+
+  let fingerprint t algo =
+    let open Ctypes in
+    let buf = allocate_n char ~count:Types.Evp.max_md_size in
+    let len = allocate int 0 in
+    let algo =
+      match algo with
+      | `SHA1 -> Bindings.EVP.sha1 ()
+    in
+    if Bindings.X509.digest t algo buf len
+    then Ctypes.string_from_ptr buf ~length:!@len
+    else raise_s [%message "Failed to compute digest"]
+  ;;
 end
 
 module Ssl_session = struct
@@ -323,51 +348,6 @@ module Dh = struct
   ;;
 end
 
-module Ec_key = struct
-  type t = Bindings.Ec_key.t
-
-  module Curve = struct
-    module T = struct
-      type t = int
-
-      let of_string = Bindings.ASN1_object.txt2nid
-
-      let to_string t =
-        match Bindings.ASN1_object.nid2sn t with
-        | None -> Int.to_string t
-        | Some s -> s
-      ;;
-    end
-
-    include T
-    include Sexpable.Of_stringable (T)
-
-    let secp384r1 = of_string "secp384r1"
-    let secp521r1 = of_string "secp521r1"
-    let prime256v1 = of_string "prime256v1"
-  end
-
-  let new_by_curve_name curve : t =
-    match Bindings.Ec_key.new_by_curve_name curve with
-    | None -> failwith "Unable to allocate/generate EC key."
-    | Some p ->
-      Gc.add_finalizer_exn p Bindings.Ec_key.free;
-      p
-  ;;
-end
-
-module Rsa = struct
-  type t = Bindings.Rsa.t
-
-  let generate_key ~key_length ~exponent () : t =
-    match Bindings.Rsa.generate_key key_length exponent None Ctypes.null with
-    | None -> failwith "Unable to allocate/generate RSA key pair."
-    | Some p ->
-      Gc.add_finalizer_exn p Bindings.Rsa.free;
-      p
-  ;;
-end
-
 module Ssl = struct
   type t = Bindings.Ssl.t [@@deriving sexp_of]
 
@@ -391,6 +371,7 @@ module Ssl = struct
       | Tlsv1 -> Ssl_method.tlsv1 ()
       | Tlsv1_1 -> Ssl_method.tlsv1_1 ()
       | Tlsv1_2 -> Ssl_method.tlsv1_2 ()
+      | Tlsv1_3 -> Ssl_method.tlsv1_3 ()
     in
     match Bindings.Ssl.set_method t version_method with
     | 1 -> ()
@@ -398,7 +379,6 @@ module Ssl = struct
   ;;
 
   let get_connect_accept_error ssl ~retval =
-    let module E = Ssl_error in
     if retval = 1
     then Ok ()
     else if retval <= 0
@@ -416,7 +396,6 @@ module Ssl = struct
   ;;
 
   let get_read_write_error ssl ~retval =
-    let module E = Ssl_error in
     if retval > 0
     then Ok retval
     else (
@@ -477,6 +456,13 @@ module Ssl = struct
     cert
   ;;
 
+  let get_peer_certificate_fingerprint t algo =
+    Option.map (Bindings.Ssl.get_peer_certificate t) ~f:(fun cert ->
+      protect
+        ~f:(fun () -> X509.fingerprint cert algo)
+        ~finally:(fun () -> Bindings.X509.free cert))
+  ;;
+
   let get_verify_result t =
     let result = Bindings.Ssl.get_verify_result t in
     if result = Types.Verify_result.ok
@@ -496,6 +482,7 @@ module Ssl = struct
     | "TLSv1" -> Tlsv1
     | "TLSv1.1" -> Tlsv1_1
     | "TLSv1.2" -> Tlsv1_2
+    | "TLSv1.3" -> Tlsv1_3
     | "unknown" ->
       failwith "SSL_get_version returned 'unknown', your session is not established"
     | s -> failwithf "bug: SSL_get_version returned %s" s ()
@@ -554,14 +541,13 @@ module Ssl = struct
     | n -> failwithf "OpenSSL bug: SSL_set_cipher_list returned %d" n ()
   ;;
 
-  module Tmp_dh_callback = Bindings.Ssl.Tmp_dh_callback
-
-  let set_tmp_dh_callback = Bindings.Ssl.set_tmp_dh_callback
-  let set_tmp_ecdh = Bindings.Ssl.set_tmp_ecdh
-
-  module Tmp_rsa_callback = Bindings.Ssl.Tmp_rsa_callback
-
-  let set_tmp_rsa_callback = Bindings.Ssl.set_tmp_rsa_callback
+  let set1_groups_list_exn t groups =
+    match Bindings.Ssl.set1_groups_list t (String.concat ~sep:":" groups) with
+    | 0 -> ()
+    | 1 ->
+      failwithf !"SSL_set1_groups_list error: %{sexp:string list}" (get_error_stack ()) ()
+    | n -> failwithf "OpenSSL bug: SSL_set1_groups_list returned %d" n ()
+  ;;
 
   let get_cipher_list t =
     let rec loop i acc =
