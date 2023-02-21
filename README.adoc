@@ -1,18 +1,12 @@
-= async-uri (Bazelized)
+= async_ssl (Bazelized)
 
-
-Bulding OpenSSL with Bazel:
-
-link:https://github.com/bazelbuild/rules_foreign_cc/issues/337[]
 
 == OPAM deps
 
 See link:async_ssl.opam[async_ssl.opam]. We do not need `conf-libssl`,
 `dune`, or `dune-configurator`.
 
-ocaml  {>= "4.08.0"}
-
-    opam install async base core ppx_jane stdio ctypes ctypes-foreign
+Install opam packages, making sure to install the correct versions.
 
 Then:
 
