@@ -15,15 +15,16 @@ ocaml_ns_archive(
     name       = "async_ssl_bindings",
     ns_name    = "async_ssl_bindings",
     manifest = [
-        ":Ctypes_foreign_threaded_flat",
+        ":Ctypes_foreign_flat",
         ":Ffi_bindings"
     ],
 )
 
 ######################## Modules & Signatures ########################
 ocaml_module(
-    name          = "Ctypes_foreign_threaded_flat",
-    struct        = "ctypes_foreign_threaded_flat.ml",
+    name          = "Ctypes_foreign_flat",
+    struct        = "ctypes_foreign_flat.ml",
+    deps          = ["@ctypes//lib/ctypes", "@ctypes//lib/foreign"],
     ppx           = ":ppx.exe",
 )
 
@@ -89,7 +90,7 @@ cc_library(
 
 ## Discover - not needed for Bazel builds
 
-########
+# ########
 # genrule(
 #     outs  = [
 #         "openssl-ccopt.sexp",
@@ -107,7 +108,6 @@ cc_library(
 #     ]
 # )
 
-########
 # genrule(
 #     outs  = ["config.h"],
 #     name  = "gen_config.h",
@@ -119,7 +119,6 @@ cc_library(
 #     tools   = [":discover.exe"]
 # )
 
-################ ################
 # cc_binary(
 #     name = "discover.exe",
 #     srcs = ["discover.c"],

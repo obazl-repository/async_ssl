@@ -9,19 +9,7 @@ load("@rules_ocaml//build:rules.bzl",
      "cc_selection_proxy",
 )
 
-PPX_ARGS = [] # ["-allow-unannotated-ignores"]
-DEPS_1 = [
-    "//bindings:async_ssl_bindings",
-    "@async//lib/async",
-    "@core//lib/core",
-    "@ctypes//lib/stubs",
-    "@ctypes//lib/ctypes"
-]
-
-OPTS_1 = [
-        "-w",
-        "-9-27-32-34"
-]
+OPTS_1 = ["-w", "-9-27-32-34"]
 
 ############################# Aggregates #############################
 ocaml_ns_archive(
@@ -42,7 +30,6 @@ ocaml_ns_archive(
         ":Verify_mode",
         ":Version"
     ],
-    cc_deps    = ["libasync_ssl_stubs"],
 )
 
 ######################## Modules & Signatures ########################
@@ -50,7 +37,9 @@ ocaml_signature(
     name          = "Config_cmi",
     src           = "config.mli",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
+    deps          = [
+        "@core//lib/core",
+        "@async//lib/async",
         ":Import",
         ":Opt",
         ":Ssl",
@@ -65,7 +54,8 @@ ocaml_module(
     struct        = "config.ml",
     sig           = ":Config_cmi",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
+    deps          = [
+        "@core//lib/core",
         ":Import",
         ":Opt",
         ":Ssl",
@@ -73,14 +63,14 @@ ocaml_module(
         ":Version"
     ],
     ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS,
 )
 
 ocaml_signature(
     name          = "Ffi__library_must_be_initialized_cmi",
     src           = "ffi__library_must_be_initialized.mli",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
+    deps          = [
+        "@async//lib/async", "@ctypes//lib/ctypes",
         ":Import",
         ":Opt",
         ":Verify_mode",
@@ -94,21 +84,22 @@ ocaml_module(
     struct        = "ffi__library_must_be_initialized.ml",
     sig           = ":Ffi__library_must_be_initialized_cmi",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
+    deps          = [
+        "@core//lib/core",
+        "//bindings:async_ssl_bindings",
         ":Import",
         ":Opt",
         ":Verify_mode",
         ":Version"
     ],
     ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS,
 )
 
 ocaml_signature(
     name          = "Ffi_generated_cmi",
     src           = "ffi_generated.mli",
     opts          = OPTS_1,
-    deps          = DEPS_1,
+    deps          = ["@ctypes//lib/stubs"],
     ppx           = ":ppx.exe",
 )
 
@@ -117,16 +108,35 @@ ocaml_module(
     struct        = "ffi_generated.ml",
     sig           = ":Ffi_generated_cmi",
     opts          = OPTS_1,
-    deps          = DEPS_1,
+    cc_deps       = ["libasync_ssl_stubs"],
     ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS,
+)
+
+ocaml_module(
+    name          = "Ffi_generated_types",
+    struct        = "ffi_generated_types.ml",
+    opts          = OPTS_1,
+    deps          = ["@ctypes//lib/ctypes"],
+    ppx           = ":ppx.exe",
+)
+
+ocaml_module(
+    name          = "Import",
+    struct        = "import.ml",
+    opts          = OPTS_1,
+    deps          = [
+        "//bindings:async_ssl_bindings",
+        ":Ffi_generated",
+        ":Ffi_generated_types"
+    ],
+    ppx           = ":ppx.exe",
 )
 
 ocaml_signature(
     name          = "Initialize_cmi",
     src           = "initialize.mli",
     opts          = OPTS_1,
-    deps          = DEPS_1,
+    deps          = ["@core//lib/core"],
     ppx           = ":ppx.exe",
 )
 
@@ -135,18 +145,15 @@ ocaml_module(
     struct        = "initialize.ml",
     sig           = ":Initialize_cmi",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
-        ":Import"
-    ],
+    deps          = [":Import"],
     ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS,
 )
 
 ocaml_signature(
     name          = "Opt_cmi",
     src           = "opt.mli",
     opts          = OPTS_1,
-    deps          = DEPS_1,
+    deps          = ["@core//lib/core"],
     ppx           = ":ppx.exe",
 )
 
@@ -155,20 +162,15 @@ ocaml_module(
     struct        = "opt.ml",
     sig           = ":Opt_cmi",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
-        ":Import"
-    ],
+    deps          = [":Import"],
     ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS,
 )
 
 ocaml_signature(
     name          = "Rfc3526_cmi",
     src           = "rfc3526.mli",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
-        ":Ffi__library_must_be_initialized"
-    ],
+    deps          = [":Ffi__library_must_be_initialized_cmi"],
     ppx           = ":ppx.exe",
 )
 
@@ -177,21 +179,19 @@ ocaml_module(
     struct        = "rfc3526.ml",
     sig           = ":Rfc3526_cmi",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
-        ":Ffi__library_must_be_initialized"
-    ],
+    deps          = [":Ffi__library_must_be_initialized"],
     ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS
 )
 
 ocaml_signature(
     name          = "Ssl_cmi",
     src           = "ssl.mli",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
-        ":Opt",
-        ":Verify_mode",
-        ":Version"
+    deps          = [
+        "@async//lib/async",
+        ":Opt_cmi",
+        ":Verify_mode_cmi",
+        ":Version_cmi"
     ],
     ppx           = ":ppx.exe",
 )
@@ -200,8 +200,12 @@ ocaml_module(
     name          = "Ssl",
     struct        = "ssl.ml",
     sig           = ":Ssl_cmi",
-    opts          = OPTS_1,
-    deps          = DEPS_1 + [
+    opts          = OPTS_1 + [
+        "-open", "Core__" # Error: Unbound module Time_float
+    ],
+    deps          = [
+        "@core//lib/core",
+        "@ctypes//lib/ctypes", # else 58 no-cmx-file
         ":Ffi__library_must_be_initialized",
         ":Import",
         ":Initialize",
@@ -211,17 +215,27 @@ ocaml_module(
         ":Version"
     ],
     ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS + ["-inline-test-lib", "async_ssl"]
+    ppx_args      = [
+        "-inline-test-lib", "async_ssl"
+    ]
+)
+
+ocaml_module(
+    name          = "Std",
+    struct        = "std.ml",
+    opts          = OPTS_1,
+    deps          = [":Ssl"],
+    ppx           = ":ppx.exe",
 )
 
 ocaml_signature(
     name          = "Tls_cmi",
     src           = "tls.mli",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
+    deps          = [
         ":Config",
         ":Import",
-        ":Ssl"
+        ":Ssl_cmi"
     ],
     ppx           = ":ppx.exe",
 )
@@ -231,20 +245,19 @@ ocaml_module(
     struct        = "tls.ml",
     sig           = ":Tls_cmi",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
+    deps          = [
         ":Config",
         ":Import",
         ":Ssl"
     ],
     ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS
 )
 
 ocaml_signature(
     name          = "Verify_mode_cmi",
     src           = "verify_mode.mli",
     opts          = OPTS_1,
-    deps          = DEPS_1,
+    deps          = ["@core//lib/core"],
     ppx           = ":ppx.exe",
 )
 
@@ -253,16 +266,14 @@ ocaml_module(
     struct        = "verify_mode.ml",
     sig           = ":Verify_mode_cmi",
     opts          = OPTS_1,
-    deps          = DEPS_1,
     ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS
 )
 
 ocaml_signature(
     name          = "Version_cmi",
     src           = "version.mli",
     opts          = OPTS_1,
-    deps          = DEPS_1,
+    deps          = ["@core//lib/core"],
     ppx           = ":ppx.exe",
 )
 
@@ -271,57 +282,18 @@ ocaml_module(
     struct        = "version.ml",
     sig           = ":Version_cmi",
     opts          = OPTS_1,
-    deps          = DEPS_1 + [
-        ":Import"
-    ],
+    deps          = [":Import"],
     ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS
 )
-
-ocaml_module(
-    name          = "Ffi_generated_types",
-    struct        = "ffi_generated_types.ml",
-    opts          = OPTS_1,
-    deps          = DEPS_1,
-    ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS
-)
-
-ocaml_module(
-    name          = "Import",
-    struct        = "import.ml",
-    opts          = OPTS_1,
-    deps          = DEPS_1 + [
-        ":Ffi_generated",
-        ":Ffi_generated_types"
-    ],
-    ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS
-)
-
-ocaml_module(
-    name          = "Std",
-    struct        = "std.ml",
-    opts          = OPTS_1,
-    deps          = DEPS_1 + [
-        ":Ssl"
-    ],
-    ppx           = ":ppx.exe",
-    ppx_args      = PPX_ARGS
-)
-
 
 ###############
 ppx_executable(
     name    = "ppx.exe",
     main    = "@ppxlib//lib/runner",
-    prologue = [
-        "@ppx_jane//lib/ppx_jane"
-    ],
+    prologue = ["@ppx_jane//lib/ppx_jane"],
 )
-############################# Rules ##################################
 
-################ ################
+################################################################
 cc_selection_proxy(
     name = "libasync_ssl_stubs",
     selection = select({
@@ -356,7 +328,8 @@ cc_library(
         "-I", "//openssl",
         "-I", "external/ctypes/lib",
         "-I", "external/ctypes/lib/ctypes",
-        "-Wno-implicit-function-declaration"
+        "-Wno-implicit-function-declaration",
+        "-w"
     ]
 )
 

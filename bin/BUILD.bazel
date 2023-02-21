@@ -10,6 +10,8 @@ load("@rules_ocaml//build:rules.bzl",
 DEPS_1 = [
     "@async//lib/async",
     "@core//lib/core",
+    "@core_unix//lib/command_unix",
+    "@core_unix//lib/filename_unix",
     "//src:async_ssl"
 ]
 
@@ -36,7 +38,7 @@ ocaml_exec_module(
     name          = "Hello",
     struct        = "hello.ml",
     sig           = ":Hello_cmi",
-    deps          = DEPS_1 + ["@core_unix//lib/command_unix"],
+    deps          = DEPS_1,
     ppx           = ":ppx.exe",
 )
 

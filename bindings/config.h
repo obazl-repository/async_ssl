@@ -4,3 +4,12 @@
 #define JSC_TLSv1_method
 #define JSC_TLSv1_1_method
 #define JSC_TLSv1_2_method
+#undef JSC_TLSv1_3_method
+#define JSC_SSL_OP_NO_SSLv2
+#define JSC_SSL_OP_NO_SSLv3
+#define JSC_SSL_OP_NO_TLSv1
+#define JSC_SSL_OP_NO_TLSv1_1
+#define JSC_SSL_OP_NO_TLSv1_2
+#define JSC_SSL_OP_NO_TLSv1_3
+#define JSC_SSL_OP_SINGLE_DH_USE
+#define JSC_SSL_OP_SINGLE_ECDH_USE
